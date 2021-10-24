@@ -10,5 +10,6 @@
 
 How to run backend?
 - Run command in terminal: `docker-compose up -d`. This command runs complete project `Frontend` &       `Backend`
+- Run `docker ps` and check on which port frontend is and browse `localhost:<Port from 9091-9095>`
 
 - Make sure no application is running on port `9091-9095`,`27017` and `8081` :)
