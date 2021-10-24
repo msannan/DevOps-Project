@@ -1,24 +1,16 @@
 version: '3.7'
 services:
   frontend:
-    build:
-      context: frontend-node/
-      dockerfile: Dockerfile
     image: sannan1357/frontend:v1.0
-    container_name: frontend
     networks:
     - application
     ports:
-    - 9091:8080
+    - 9091-9095:8080
     depends_on: 
     - backend
 
   backend:
-    build:
-      context: backend-python/
-      dockerfile: Dockerfile
     image: sannan1357/backend:v1.0
-    container_name: backend
     networks:
     - application
     depends_on:
@@ -27,7 +19,6 @@ services:
   mongodb:
     image: mongo
     restart: always
-    container_name: mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: pass12345
@@ -40,7 +31,6 @@ services:
 
   mongo-express:
     image: mongo-express
-    container_name: mongoexpress
     environment:
     - ME_CONFIG_MONGODB_SERVER=mongodb
     - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
