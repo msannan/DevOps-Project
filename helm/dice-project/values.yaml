@@ -1,0 +1,41 @@
+applicationName: dice-project
+
+backend:
+  replicas: 1
+  name: backend
+  image: sannan1357/backend:v1.0
+  imagePullPolicy: IfNotPresent
+  containerPort: 8080
+  deployment:
+    labels: 
+      name: backend-dep
+    annotations:
+      name: backend-k8s
+  service:
+    label: backend-svc
+    type: ClusterIP
+    port: 8080
+
+db:
+  name: mongo
+  image: mongo
+  port: 27017
+  replicas: 1
+  username: root
+  password: pass12345
+  volumename: mongo-persistent-storage
+  volumepath: /data/db
+  storage: 1Gi
+
+frontend:
+  name: frontend
+  replicas: 1
+  label: frontend-dep-label
+  image: sannan1357/frontend:v1.0
+  port: 8080
+  service:
+    label: frontend-svc
+    type: NodePort
+    port: 8080
+    nodePort: 31500
+  

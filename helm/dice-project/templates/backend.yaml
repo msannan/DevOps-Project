@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.backend.name }}
+  labels:
+    name: {{ .Values.backend.deployment.labels.name }}
+  annotations:
+    class: {{ .Values.backend.deployment.annotations.name }}
+spec:
+  replicas: {{ .Values.backend.replicas}}
+  selector:
+    matchLabels:
+{{ include "application-backend.labels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "application-backend.labels" . | indent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.backend.name }}
+        image: "{{ .Values.backend.image }}"
+        imagePullPolicy: {{ .Values.backend.imagePullPolicy }}  
+        ports:
+        - containerPort: {{ .Values.backend.containerPort }}
+          name: tcp
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.backend.name }}
+  labels:
+    name: {{ .Values.backend.service.label }}
+spec:
+  type: {{ .Values.backend.service.type }}
+  selector:
+{{ include "application-backend.labels" . | indent 4 }}
+  ports:
+  - protocol: TCP
+    port: {{ .Values.backend.service.port }}
+    targetPort: {{ .Values.backend.service.port }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.db.name }}
+spec:
+  serviceName: "{{ .Values.db.name }}"
+  selector:
+    matchLabels:
+{{ include "db.labels" . | indent 6 }}
+  replicas: {{ .Values.db.replicas }}
+  template:
+    metadata:
+      labels:
+{{ include "db.labels" . | indent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.db.name }}
+        image: "{{ .Values.db.image }}"
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: {{ .Values.db.username }}
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: {{ .Values.db.password }}
+        ports:
+        - containerPort: {{ .Values.db.port }}
+          name: {{ .Values.db.name }}
+        volumeMounts:
+        - name: {{ .Values.db.volumename }}
+          mountPath: {{ .Values.db.volumepath }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.db.volumename }}
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: {{ .Values.db.storage }}
