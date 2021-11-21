@@ -1,3 +1,4 @@
+# backend-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,8 +25,40 @@ spec:
         ports:
         - containerPort: 8080
           name: tcp
-
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /hello
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /hello
+            port: 8080
+          initialDelaySeconds: 3
+          failureThreshold: 2
+          periodSeconds: 3
+        volumeMounts:
+        - name: configmap-volume
+          mountPath: /users
+      serviceAccountName: backend-service-account
+      volumes:
+      - name: configmap-volume
+        configMap:
+          name: backend-configmap
 ---
+# backend-service.yaml file
 apiVersion: v1
 kind: Service
 metadata:
@@ -42,6 +75,7 @@ spec:
     port: 8080
     targetPort: 8080
 ---
+# statefulset-mongo-backend.yaml file
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -62,9 +96,15 @@ spec:
         image: mongo
         env:
         - name: MONGO_INITDB_ROOT_USERNAME
-          value: root
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: ROOT_USERNAME
         - name: MONGO_INITDB_ROOT_PASSWORD
-          value: pass12345
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: ROOT_PASSWORD
         ports:
         - containerPort: 27017
           name: mongo
@@ -80,3 +120,66 @@ spec:
       resources:
         requests:
           storage: 1Gi
+---
+# ServiceAccount-backend.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: ServiceAccount
+  name: backend-service-account
+---
+# backend-RoleBinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels: 
+    app: ClusterRole
+  name: backend-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "pods"
+    verbs:
+      - list
+      - get
+      - watch
+      - create
+---
+# backend-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels: 
+    app: ClusterRoleBinding
+  name: backend-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend-role
+subjects:
+  - kind: ServiceAccount
+    name: backend-service-account
+    namespace: default
+---
+# backend-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+type: Opague
+stringData:
+  ROOT_USERNAME: root
+data:
+  ROOT_PASSWORD: cGFzczEyMzQ1Cg==
+---
+# backend-ConfigMap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-configmap
+  namespace: default
+data:
+  details: My name is Sannan and i'm working as DevOps Engineer in Contour.
+
